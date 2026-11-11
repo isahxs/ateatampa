@@ -1,11 +1,13 @@
+import React, { useState, useEffect } from 'react';
 import { StyleSheet, View, TouchableOpacity } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import Feather from '@react-native-vector-icons/feather';
-
 import { theme } from '../../theme';
-
 import Logo from '../Logo';
+
+import { auth } from '../../services/firebase';
+import { onAuthStateChanged } from 'firebase/auth';
 
 export default function Header({
     navigation,
@@ -15,8 +17,20 @@ export default function Header({
 }) {
 
     const insets = useSafeAreaInsets();
+    const [usuarioLogado, setUsuarioLogado] = useState(null);
+
+    useEffect(() => {
+        const unsubscribe = onAuthStateChanged(auth, (user) => {
+            setUsuarioLogado(user);
+        });
+        return unsubscribe;
+    }, []);
 
     const isDrawerMode = navigationMode === 'drawer';
+
+    const currentRouteName = route?.name || navigation.getState()?.routes[navigation.getState()?.index]?.name;
+
+    const ocultarIconeUsuario = usuarioLogado || currentRouteName === 'Cadastro' || currentRouteName === 'Login';
 
     const handleLogoPress = () => {
         if (isDrawerMode) {
@@ -52,7 +66,6 @@ export default function Header({
             navigation.navigate('Auth', {
                 screen: 'Login',
             });
-
             return;
         }
 
@@ -75,17 +88,19 @@ export default function Header({
                 </View>
 
                 <View style={styles.menu}>
-                    <TouchableOpacity
-                        onPress={handleUserPress}
-                        accessibilityRole='button'
-                        accessibilityLabel='Acessar Conta'
-                    >
-                        <Feather
-                            name='user'
-                            size={30}
-                            color={theme.colors.dark}
-                        />
-                    </TouchableOpacity>
+                    {!ocultarIconeUsuario && (
+                        <TouchableOpacity
+                            onPress={handleUserPress}
+                            accessibilityRole='button'
+                            accessibilityLabel='Acessar Conta'
+                        >
+                            <Feather
+                                name='user'
+                                size={30}
+                                color={theme.colors.dark}
+                            />
+                        </TouchableOpacity>
+                    )}
 
                     <TouchableOpacity
                         onPress={handleNavigationPress}
@@ -117,7 +132,6 @@ const styles = StyleSheet.create({
         justifyContent: 'space-between',
         alignItems: 'center',
         paddingHorizontal: theme.spacing[8]
-
     },
 
     menu: {
