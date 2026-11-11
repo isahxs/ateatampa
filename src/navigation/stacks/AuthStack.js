@@ -21,6 +21,7 @@ export default function AuthStack() {
                 component={Login}
                 options={{
                     title: 'Entrar',
+                    headerShown: false
                 }}
             />
 

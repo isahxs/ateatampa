@@ -1,28 +1,16 @@
-import { useState } from 'react';
-import {
-    StyleSheet,
-    KeyboardAvoidingView,
-    Platform,
-    View,
-    ScrollView,
-    Text,
-    TextInput,
-    TouchableOpacity,
-} from 'react-native';
-
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useNavigation } from '@react-navigation/native';
+import React, { useState } from "react";
+import { useNavigation } from "@react-navigation/native";
+import { StyleSheet, KeyboardAvoidingView, Platform, ScrollView, Text, View, TextInput, TouchableOpacity, ActivityIndicator } from "react-native";
 
 import { Feather } from '@react-native-vector-icons/feather';
-
-import { CadastroCliente } from '../../backend/authService'; 
-import { theme } from '../../theme';
-import { showSuccess, showError } from '../../utilities/alerts';
-
 import Logo from '../../components/Logo';
 
-export default function CadastroClienteScreen() {
-  const insets = useSafeAreaInsets();
+import { createUserWithEmailAndPassword } from "firebase/auth";
+import { doc, setDoc, serverTimestamp } from "firebase/firestore";
+import { auth, db } from "../../services/firebase";
+
+export default function Cadastro() {
+
   const navigation = useNavigation();
 
   const [nome, setNome] = useState('');
@@ -31,36 +19,52 @@ export default function CadastroClienteScreen() {
   const [confirmarSenha, setConfirmarSenha] = useState('');
 
   const [mostrarSenha, setMostrarSenha] = useState(false);
-  const [mostrarConfirmarSenha, setMostrarConfirmarSenha] = useState(false);
+  const [mostrarConfirmarSenha, setMostrarConfirmarSenha] = useState(false)
 
-  const [pressionadoLogin, setPressionadoLogin] = useState(false);
-  const [loading, setLoading] = useState(false);
+  const [pressionandoLogin, setPressionandoLogin] = useState(false);
+
+  const [carregando, setCarregando] = useState(false);
 
   const handleCadastro = async () => {
-    if (!nome || !email || !senha || !confirmarSenha) {
-      showError('Por gentileza, preencha todos os campos requeridos.');
-      return;
-    }
+    const nomeLimpo = nome.trim();
+    const emailLimpo = email.trim().toLowerCase();
 
+    if (!nomeLimpo || !emailLimpo || !senha || !confirmarSenha) {
+      return alert("Preencha todos os campos.");
+    }
+    if (senha.length < 6) {
+      return alert("A senha precisa ter menos de caracteres.");
+    }
     if (senha !== confirmarSenha) {
-      showError('As senhas não coincidem.');
-      return;
+      return alert("As senha não coicidem.");
     }
 
-    setLoading(true);
+    setCarregando(true);
+    try {
+      const cred = await createUserWithEmailAndPassword(auth, emailLimpo, senha);
 
-    //Autenticação do firebase
-    const resultado = await CadastroCliente({ nome, email, senha });
+      await setDoc(doc(db, "clientes", cred.user.uid), {
+        nome: nomeLimpo,
+        email: emailLimpo,
+        tipo: "cliente",
+        enderecos: [],
+        criadoEm: serverTimestamp(),
+        alteradoEm: serverTimestamp(),
+      });
 
-    setLoading(false);
-
-    if (resultado.success) {
-      showSuccess('Cadastro realizado com sucesso!');
-      navigation.navigate('Login'); 
-    } else {
-      showError(resultado.error);
+      alert("Conta criada com sucesso!");
+      navigation.navigate('Login');
+    } catch (e) {
+      console.log("Erro no cadastro:", e.code, e.message);
+      if (e.code === "auth/email-already-in-use") alert("Este e-mail já está cadastrado.");
+      else if (e.code === "auth/invalid-email") alert("E-mail inválido.");
+      else if (e.code === "auth/weak-password") alert("Senha muito fraca.");
+      else if (e.code === "permission-denied") alert("Sem premissão para salvar no banco. Verifique as regras do Firestore.");
+      else alert("Erro ao criar a conta.")
+    } finally {
+      setCarregando(false);
     }
-  };
+  }
 
   return (
     <KeyboardAvoidingView
@@ -72,27 +76,29 @@ export default function CadastroClienteScreen() {
 
         <Logo width={160} height={160} />
 
-        
+        {/* Título atualizado com letras maiúsculas */}
         <Text style={styles.titulo}>Crie sua conta</Text>
 
         <View style={styles.form}>
 
+          {/* Label e Placeholder de Nome */}
           <Text style={styles.label}>Nome</Text>
           <TextInput
             style={styles.input}
-            placeholder='Insira seu nome'
-            placeholderTextColor='#888888'
+            placeholder="Insira seu nome"
+            placeholderTextColor="#888888"
             value={nome}
             onChangeText={setNome}
           />
 
+          {/* Label e Placeholder de Email */}
           <Text style={styles.label}>Email</Text>
           <TextInput
             style={styles.input}
-            placeholder='Insira seu e-mail'
-            placeholderTextColor='#888888'
-            keyboardType='email-address'
-            autoCapitalize='none'
+            placeholder="Insira seu e-mail"
+            placeholderTextColor="#888888"
+            keyboardType="email-address"
+            autoCapitalize="none"
             value={email}
             onChangeText={setEmail}
           />
@@ -100,49 +106,54 @@ export default function CadastroClienteScreen() {
           <View style={styles.inputContainer}>
             <TextInput
               style={styles.inputIcon}
-              placeholder='Insira sua senha'
-              placeholderTextColor='#888888'
+              placeholder="Insira sua senha"
+              placeholderTextColor="#888888"
               secureTextEntry={!mostrarSenha}
               value={senha}
               onChangeText={setSenha}
             />
             <TouchableOpacity onPress={() => setMostrarSenha(!mostrarSenha)}>
-              <Feather name={mostrarSenha ? 'eye' : 'eye-off'} size={20} color={'#8A436A'} />
+              <Feather name={mostrarSenha ? "eye" : "eye-off"} size={20} color={"#8A436A"} />
             </TouchableOpacity>
           </View>
           <Text style={styles.label}>Confirmar Senha</Text>
           <View style={styles.inputContainer}>
             <TextInput
               style={styles.inputIcon}
-              placeholder='Confirme a senha'
-              placeholderTextColor='#888888'
+              placeholder="Confirme a senha"
+              placeholderTextColor="#888888"
               secureTextEntry={!mostrarConfirmarSenha}
               value={confirmarSenha}
               onChangeText={setConfirmarSenha}
             />
             <TouchableOpacity onPress={() => setMostrarConfirmarSenha(!mostrarConfirmarSenha)}>
-              <Feather name={mostrarConfirmarSenha ? 'eye' : 'eye-off'} size={20} color={'#8A436A'} />
+              <Feather name={mostrarConfirmarSenha ? "eye" : "eye-off"} size={20} color={"#8A436A"} />
             </TouchableOpacity>
           </View>
 
-          <TouchableOpacity 
-            style={styles.botao} 
+          <TouchableOpacity
+            style={[styles.botao, carregando && { opacity: 0.6 }]}
             onPress={handleCadastro}
-            disabled={loading}
+            disabled={carregando}
           >
-            <Text style={styles.textoBotao}>{loading ? 'Cadastrando...' : 'Cadastrar'}</Text>
+            {carregando
+              ? <ActivityIndicator color="#ffffff" />
+              : <Text style={styles.textoBotao}>Cadastrar</Text>}
           </TouchableOpacity>
 
           <View style={styles.loginContainer}>
             <Text style={styles.textoLogin}>Já possui uma conta? </Text>
 
-            <TouchableOpacity 
-              onPressIn={() => setPressionadoLogin(true)}
-              onPressOut={() => setPressionadoLogin(false)}
+            <TouchableOpacity
+              onPressIn={() => setPressionandoLogin(true)}
+              onPressOut={() => setPressionandoLogin(false)}
               onPress={() => navigation.navigate('Login')}
             >
-              <Text style={[styles.textoLoginDestaque, pressionadoLogin && styles.sublinhadoAtivo]}>Realize seu login aqui!</Text>
+              <Text style={[styles.textoLoginDestaque, pressionandoLogin && styles.sublinhadoAtivo]}>
+                Realize seu login aqui
+              </Text>
             </TouchableOpacity>
+
           </View>
 
         </View>
@@ -176,7 +187,7 @@ const styles = StyleSheet.create({
     fontSize: 24,
     color: '#8b1414',
     marginBottom: 30,
-    fontFamily: theme.typography.fonts.story,
+    fontFamily: 'StoryScript',
   },
   form: {
     width: '100%',
@@ -224,7 +235,7 @@ const styles = StyleSheet.create({
   textoBotao: {
     color: '#FFFFFF',
     fontSize: 16,
-    fontStyle: 'italic'
+    fontStyle: "italic"
   },
   textoLogin: {
     fontSize: 14,

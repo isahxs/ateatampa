@@ -76,17 +76,6 @@ export default function Header({
 
                 <View style={styles.menu}>
                     <TouchableOpacity
-                        accessibilityRole='button'
-                        accessibilityLabel='Pesquisar'
-                    >
-                        <Feather
-                            name='search'
-                            size={30}
-                            color={theme.colors.dark}
-                        />
-                    </TouchableOpacity>
-
-                    <TouchableOpacity
                         onPress={handleUserPress}
                         accessibilityRole='button'
                         accessibilityLabel='Acessar Conta'

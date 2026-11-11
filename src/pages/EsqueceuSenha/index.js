@@ -1,81 +1,94 @@
-import { useState } from 'react';
-import {
-  StyleSheet,
-  KeyboardAvoidingView,
-  Platform,
-  View,
-  ScrollView,
-  Text,
-  TextInput,
-  TouchableOpacity,
-} from 'react-native';
-
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useNavigation } from '@react-navigation/native';
-
-import { theme } from '../../theme';
-import { showSuccess } from '../../utilities/alerts';
+import React, { useState } from "react";
+import { StyleSheet, KeyboardAvoidingView, Platform, ScrollView, Text, View, TextInput, TouchableOpacity } from "react-native";
+import { useNavigation } from "@react-navigation/native";
 
 import Logo from '../../components/Logo';
 
-export default function EsqueceuSenha() {
+import { auth } from "../../services/firebase";
+import { sendPasswordResetEmail } from "firebase/auth";
+
+export default function EsqueceuSenhaCliente() {
 
   const navigation = useNavigation();
 
   const [email, setEmail] = useState('');
+  const [carregando, setCarregando] = useState(false);
 
-  const handleRecuperar = () => {
-    showSuccess('Um link de recuperação foi enviado ao seu e-mail!');
-    navigation.navigate('Login');
-  }
+  const handleRecuperar = async () => {
+    const emailLimpo = email.trim().toLowerCase();
+
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailLimpo)) {
+      alert('Digite um e-mail válido.');
+      return;
+    }
+
+    try {
+      setCarregando(true);
+
+      await sendPasswordResetEmail(auth, emailLimpo);
+      alert('Se o e-mail estiver cadastrado, você receberá um link para redefinir sua senha.');
+      navigation.navigate('Login');
+    } catch (error) {
+      console.log('Erro ao enviar e-mail:', error.code, error.message);
+
+      if (error.code === 'auth/invalid-email') {
+        alert('O endereço de e-mail é inválido.');
+      } else if (error.code === 'auth/too-many-requests') {
+        alert('Muitas tentativas. Aguarde um pouco e tente novamente.');
+      } else {
+        alert('Não foi possível enviar o e-mail. Verifique sua conexão e tente novamente.');
+      }
+    } finally {
+      setCarregando(false);
+    }
+  };
 
   return (
     <KeyboardAvoidingView
       style={styles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
-
       <ScrollView contentContainerStyle={styles.scrollContainer}>
 
         <Logo width={160} height={160} />
 
         <Text style={styles.titulo}>Recuperar sua senha</Text>
+
         <View style={styles.form}>
           <Text style={styles.label}>Email</Text>
           <View style={styles.inputContainer}>
             <TextInput
               style={styles.inputIcon}
-              placeholder='Insira seu e-mail'
-              placeholderTextColor='#888888'
-              keyboardType='email-address'
-              autoCapitalize='none'
+              placeholder="Insira seu e-mail"
+              placeholderTextColor="#888888"
+              keyboardType="email-address"
+              autoCapitalize="none"
               value={email}
               onChangeText={setEmail}
             />
           </View>
 
-          <TouchableOpacity style={styles.botao}
-            onPress={() => navigation.navigate('Alterar Senha')}
+          <TouchableOpacity
+            style={[styles.botao, carregando && { opacity: 0.6 }]}
+            onPress={handleRecuperar}
+            disabled={carregando}
           >
-            <Text style={styles.textoBotao}>Enviar</Text>
+            <Text style={styles.textoBotao}>
+              {carregando ? 'Enviando...' : 'Enviar'}
+            </Text>
           </TouchableOpacity>
 
           <TouchableOpacity
             style={styles.loginContainerRight}
+            onPress={() => navigation.navigate('LoginCliente')}
           >
-            <Text
-              onPress={() => navigation.navigate('Login')}
-              style={styles.textoLoginDestaque}>Realizar Login</Text>
-
+            <Text style={styles.textoLoginDestaque}>Realizar login</Text>
           </TouchableOpacity>
 
         </View>
-
       </ScrollView>
-
     </KeyboardAvoidingView>
-  )
-
+  );
 }
 
 const styles = StyleSheet.create({
@@ -93,7 +106,7 @@ const styles = StyleSheet.create({
     fontSize: 24,
     color: '#8b1414',
     marginBottom: 30,
-    fontFamily: theme.typography.fonts.story,
+    fontFamily: 'StoryScript',
   },
   form: {
     width: '100%'
@@ -113,7 +126,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 15,
     marginBottom: 25,
     borderWidth: 1,
-    borderColor: '#84436a'
+    borderColor: '#8A436A'
   },
   inputIcon: {
     flex: 1,
@@ -121,7 +134,7 @@ const styles = StyleSheet.create({
     fontStyle: 'italic'
   },
   botao: {
-    backgroundColor: '#844364',
+    backgroundColor: '#8A436A',
     height: 45,
     borderRadius: 25,
     justifyContent: 'center',
@@ -138,8 +151,7 @@ const styles = StyleSheet.create({
   },
   textoLoginDestaque: {
     fontSize: 14,
-    color: '#8B1A1A',
+    color: '#000',
     fontStyle: 'italic',
-    fontWeight: 'bold'
   }
-})
+});
