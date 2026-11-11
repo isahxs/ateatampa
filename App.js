@@ -1,20 +1,40 @@
+import * as SplashScreen from 'expo-splash-screen';
+
+import { useEffect } from 'react';
+import { useFonts } from 'expo-font';
+
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { StatusBar } from 'expo-status-bar';
-import { StyleSheet, Text, View } from 'react-native';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
+
+import AppNavigation from './src/navigation';
+
+SplashScreen.preventAutoHideAsync();
 
 export default function App() {
-  return (
-    <View style={styles.container}>
-      <Text>Open up App.js to start working on your app!</Text>
-      <StatusBar style="auto" />
-    </View>
-  );
+    const [loaded, error] = useFonts({
+        StoryScript: require('./assets/fonts/story-script.otf'),
+        NotoSans: require('./assets/fonts/noto-sans.ttf'),
+    });
+
+    useEffect(() => {
+        if (loaded || error) {
+            SplashScreen.hideAsync();
+        }
+    }, [loaded, error]);
+
+    if (!loaded && !error) {
+        return null;
+    }
+
+    return (
+        <SafeAreaProvider>
+            <GestureHandlerRootView>
+                <AppNavigation />
+            </GestureHandlerRootView>
+
+            <StatusBar style='auto' hidden={true} />
+        </SafeAreaProvider>
+    );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#fff',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-});
