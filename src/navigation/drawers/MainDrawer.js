@@ -39,6 +39,15 @@ export default function MainDrawer() {
                 options={{
                     drawerIcon: ({ color, size }) => <Feather name='shopping-bag' size={size} color={color} />,
                 }}
+                listeners={({ navigation }) => ({
+                    drawerItemPress: (event) => {
+                        event.preventDefault();
+
+                        navigation.navigate('Produtos', {
+                            categoryId: null,
+                        });
+                    },
+                })}
             />
 
             <Drawer.Screen

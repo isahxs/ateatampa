@@ -41,10 +41,7 @@ export default function MainDrawerContent(props) {
                     onPress: async () => {
                         try {
                             await signOut(auth);
-                            
-                            navigation.navigate('Auth', {
-                                screen: 'Login',
-                            });
+                            navigation.jumpTo('Home');
                         } catch (error) {
                             console.log("Erro ao sair:", error);
                             Alert.alert("Erro", "Não foi possível realizar o logout.");

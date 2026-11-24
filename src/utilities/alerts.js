@@ -15,3 +15,29 @@ export function showWarn(message) {
 export function showError(message) {
     Alert.alert('Erro', message);
 }
+
+export function showConfirmation(
+    title,
+    message,
+    confirmText,
+    onConfirm
+) {
+    Alert.alert(
+        title,
+        message,
+        [
+            {
+                text: 'Cancelar',
+                style: 'cancel',
+            },
+            {
+                text: confirmText,
+                style: 'destructive',
+                onPress: onConfirm,
+            },
+        ],
+        {
+            cancelable: true,
+        }
+    );
+}

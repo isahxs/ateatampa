@@ -1,36 +1,24 @@
-import React, { useState, useEffect } from 'react';
 import { StyleSheet, View, TouchableOpacity } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import Feather from '@react-native-vector-icons/feather';
+import { Feather } from '@react-native-vector-icons/feather';
+
 import { theme } from '../../theme';
+
 import Logo from '../Logo';
 
-import { auth } from '../../services/firebase';
-import { onAuthStateChanged } from 'firebase/auth';
+import { useAuth } from '../../hooks/useAuth';
 
-export default function Header({
-    navigation,
-    route,
-    options,
-    navigationMode = 'drawer'
-}) {
+export default function Header({ navigation, route, options, navigationMode = 'drawer' }) {
 
     const insets = useSafeAreaInsets();
-    const [usuarioLogado, setUsuarioLogado] = useState(null);
-
-    useEffect(() => {
-        const unsubscribe = onAuthStateChanged(auth, (user) => {
-            setUsuarioLogado(user);
-        });
-        return unsubscribe;
-    }, []);
+    const { user, loading } = useAuth();
 
     const isDrawerMode = navigationMode === 'drawer';
 
     const currentRouteName = route?.name || navigation.getState()?.routes[navigation.getState()?.index]?.name;
 
-    const ocultarIconeUsuario = usuarioLogado || currentRouteName === 'Cadastro' || currentRouteName === 'Login';
+    const emTelaDeAuth = currentRouteName === 'Cadastro' || currentRouteName === 'Login';
 
     const handleLogoPress = () => {
         if (isDrawerMode) {
@@ -74,12 +62,7 @@ export default function Header({
 
     return (
         <View
-            style={[
-                styles.header,
-                {
-                    paddingTop: insets.top
-                }
-            ]}>
+            style={[styles.header, { paddingTop: insets.top }]}>
             <View style={styles.navbar}>
                 <View style={styles.logo}>
                     <TouchableOpacity onPress={handleLogoPress}>
@@ -88,32 +71,22 @@ export default function Header({
                 </View>
 
                 <View style={styles.menu}>
-                    {!ocultarIconeUsuario && (
+                    {!loading && !user && !emTelaDeAuth && (
                         <TouchableOpacity
                             onPress={handleUserPress}
                             accessibilityRole='button'
                             accessibilityLabel='Acessar Conta'
                         >
-                            <Feather
-                                name='user'
-                                size={30}
-                                color={theme.colors.dark}
-                            />
+                            <Feather name='user' size={30} color={theme.colors.dark} />
                         </TouchableOpacity>
                     )}
 
                     <TouchableOpacity
                         onPress={handleNavigationPress}
                         accessibilityRole='button'
-                        accessibilityLabel={
-                            isDrawerMode ? 'Abrir Menu' : 'Voltar'
-                        }
+                        accessibilityLabel={isDrawerMode ? 'Abrir Menu' : 'Voltar'}
                     >
-                        <Feather
-                            name={isDrawerMode ? 'menu' : 'arrow-left'}
-                            size={30}
-                            color={theme.colors.dark}
-                        />
+                        <Feather name={isDrawerMode ? 'menu' : 'arrow-left'} size={30} color={theme.colors.dark} />
                     </TouchableOpacity>
                 </View>
             </View>

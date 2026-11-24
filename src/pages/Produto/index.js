@@ -1,12 +1,15 @@
-import { StyleSheet, ActivityIndicator, View, ScrollView, Text, Image, TouchableOpacity } from 'react-native';
 import { useState, useEffect } from 'react';
+
+import { StyleSheet, ActivityIndicator, View, ScrollView, Text, Image, TouchableOpacity } from 'react-native';
+
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Feather } from '@react-native-vector-icons/feather';
 
-import { doc, getDoc } from 'firebase/firestore';
+import { useCart } from '../../hooks/useCart';
+import { getProductById } from '../../services/product';
 
-import { db } from '../../services/firebase';
+import { formatPrice } from '../../utilities/formatPrice';
 import { theme } from '../../theme';
 
 import ImagePlaceholder from '../../assets/default-image.png';
@@ -16,48 +19,67 @@ export default function Produto({ navigation, route }) {
 
     const { productId } = route.params;
 
+    const { addItem } = useCart();
+
     const [product, setProduct] = useState(null);
     const [amount, setAmount] = useState(1);
+
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
 
+    const handleAddToCart = () => {
+        addItem(product, amount);
+
+        navigation.navigate('Main', {
+            screen: 'Carrinho',
+        });
+    };
+
     const increaseAmount = () => {
         if (amount < 10) {
-            setAmount(amount + 1);
+            setAmount((current) => current + 1);
         }
     };
 
     const decreaseAmount = () => {
         if (amount > 1) {
-            setAmount(amount - 1);
+            setAmount((current) => current - 1);
         }
     };
 
     useEffect(() => {
-        const getProduct = async () => {
+        async function loadProduct() {
             if (!productId) {
                 setError('ID do produto não fornecido.');
+
                 setLoading(false);
+
                 return;
             }
-            try {
-                const productRef = doc(db, 'produtos', productId);
-                const productSnapshot = await getDoc(productRef);
 
-                if (productSnapshot.exists()) {
-                    setProduct({
-                        id: productSnapshot.id,
-                        ...productSnapshot.data(),
-                    });
+            try {
+                setLoading(true);
+                setError('');
+
+                const productData = await getProductById(productId);
+
+                if (!productData) {
+                    setProduct(null);
+
+                    return;
                 }
+
+                setProduct(productData);
             } catch (error) {
-                console.error('An error occurred:', error);
+                console.error(error);
+
                 setError('Não foi possível carregar o produto.');
             } finally {
                 setLoading(false);
             }
-        };
-        getProduct();
+        }
+
+        loadProduct();
     }, [productId]);
 
     if (loading) {
@@ -122,7 +144,10 @@ export default function Produto({ navigation, route }) {
                     >
                         <Text
                             style={[
-                                { color: theme.colors.muted, marginVertical: theme.spacing[2] },
+                                {
+                                    color: theme.colors.muted,
+                                    marginVertical: theme.spacing[2],
+                                },
                                 theme.utils.textSm,
                             ]}
                         >
@@ -134,24 +159,26 @@ export default function Produto({ navigation, route }) {
         );
     }
 
-    const formatPrice =
-        typeof product.preco === 'number'
-            ? product.preco.toLocaleString('pt-BR', {
-                  style: 'currency',
-                  currency: 'BRL',
-              })
-            : 'Preço Indisponível';
+    const formattedPrice = formatPrice(product.price);
 
-    const imageSource = product.imagemUrl ? { uri: product.imagemUrl } : ImagePlaceholder;
+    const imageSource = product.imageUrl
+        ? {
+              uri: product.imageUrl,
+          }
+        : ImagePlaceholder;
 
     return (
         <ScrollView
-            style={[styles.container, { paddingTop: insets.top }]}
+            style={[
+                styles.container,
+                {
+                    paddingTop: insets.top,
+                },
+            ]}
             contentContainerStyle={{
                 paddingBottom: insets.bottom + theme.spacing[4],
             }}
             showsVerticalScrollIndicator={false}
-            horizontal={false}
         >
             <View style={styles.card}>
                 <View style={styles.header}>
@@ -159,25 +186,28 @@ export default function Produto({ navigation, route }) {
                 </View>
 
                 <View style={styles.main}>
-                    <Text style={styles.productName}>{product.nome}</Text>
+                    <Text style={styles.productName}>{product.name}</Text>
 
-                    <Text style={styles.productPrice}>{formatPrice}</Text>
+                    <Text style={styles.productPrice}>{formattedPrice}</Text>
 
-                    <Text style={styles.productDescription}>{product.descricao}</Text>
+                    <Text style={styles.productDescription}>{product.description}</Text>
 
-                    <View style={[theme.utils.flexRow, { gap: theme.spacing[4] }]}>
+                    <View
+                        style={[
+                            theme.utils.flexRow,
+                            {
+                                gap: theme.spacing[4],
+                            },
+                        ]}
+                    >
                         <View style={styles.badge}>
-                            <Text style={styles.badgeIcon}>
-                                <Feather name='award' size={16} color={theme.colors.dark} />
-                            </Text>
+                            <Feather name='award' size={16} color={theme.colors.dark} />
 
                             <Text style={styles.badgeTitle}>Ingredientes Frescos</Text>
                         </View>
 
                         <View style={styles.badge}>
-                            <Text style={styles.badgeIcon}>
-                                <Feather name='cloud-snow' size={16} color={theme.colors.dark} />
-                            </Text>
+                            <Feather name='cloud-snow' size={16} color={theme.colors.dark} />
 
                             <Text style={styles.badgeTitle}>Manter Refrigerado</Text>
                         </View>
@@ -187,29 +217,27 @@ export default function Produto({ navigation, route }) {
                 <View style={styles.footer}>
                     <View style={styles.amountBadge}>
                         <TouchableOpacity onPress={decreaseAmount}>
-                            <Text>
-                                <Feather name='minus-circle' size={16} color={theme.colors.dark} />
-                            </Text>
+                            <Feather name='minus-circle' size={16} color={theme.colors.dark} />
                         </TouchableOpacity>
 
-                        <Text style={{ paddingHorizontal: theme.spacing[2] }}>{amount}</Text>
+                        <Text
+                            style={{
+                                paddingHorizontal: theme.spacing[2],
+                            }}
+                        >
+                            {amount}
+                        </Text>
 
                         <TouchableOpacity onPress={increaseAmount}>
-                            <Text>
-                                <Feather name='plus-circle' size={16} color={theme.colors.dark} />
-                            </Text>
+                            <Feather name='plus-circle' size={16} color={theme.colors.dark} />
                         </TouchableOpacity>
                     </View>
 
-                    <View>
-                        <TouchableOpacity style={styles.btn}>
-                            <Text style={styles.btnIcon}>
-                                <Feather name='shopping-bag' size={16} color={theme.colors.light} />
-                            </Text>
+                    <TouchableOpacity style={styles.btn} onPress={handleAddToCart}>
+                        <Feather name='shopping-bag' size={16} color={theme.colors.light} />
 
-                            <Text style={styles.btnText}>Adicionar ao Carrinho</Text>
-                        </TouchableOpacity>
-                    </View>
+                        <Text style={styles.btnText}>Adicionar ao Carrinho</Text>
+                    </TouchableOpacity>
                 </View>
             </View>
         </ScrollView>
@@ -284,10 +312,6 @@ const styles = StyleSheet.create({
 
     badgeTitle: {
         color: theme.colors.dark,
-        fontSize: theme.typography.sizes.xs,
-    },
-
-    badgeIcon: {
         fontSize: theme.typography.sizes.xs,
     },
 

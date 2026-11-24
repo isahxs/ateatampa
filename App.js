@@ -9,6 +9,9 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import AppNavigation from './src/navigation';
 
+import { AuthProvider } from './src/contexts/AuthContext';
+import { CartProvider } from './src/contexts/CartContext';
+
 SplashScreen.preventAutoHideAsync();
 
 export default function App() {
@@ -30,11 +33,14 @@ export default function App() {
     return (
         <SafeAreaProvider>
             <GestureHandlerRootView>
-                <AppNavigation />
+                <AuthProvider>
+                    <CartProvider>
+                        <AppNavigation />
+                    </CartProvider>
+                </AuthProvider>
             </GestureHandlerRootView>
 
             <StatusBar style='auto' hidden={true} />
         </SafeAreaProvider>
     );
 }
-

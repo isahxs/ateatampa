@@ -1,18 +1,25 @@
-import { StyleSheet, View, Text, FlatList } from 'react-native';
-import { useState, useEffect } from 'react';
+import { StyleSheet, View, Text, FlatList, ActivityIndicator } from 'react-native';
+
+import { useEffect, useState } from 'react';
+
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { collection, getDocs } from 'firebase/firestore';
+import { getProducts } from '../../services/product';
 
-import { db } from '../../services/firebase';
 import { theme } from '../../theme';
 
 import Card from '../../components/Card';
 
-export default function Produtos({ navigation }) {
+export default function Produtos({ navigation, route }) {
     const insets = useSafeAreaInsets();
 
+    const categoryId = route.params?.categoryId;
+
     const [products, setProducts] = useState([]);
+
+    const [isLoading, setIsLoading] = useState(true);
+
+    const [errorMessage, setErrorMessage] = useState('');
 
     const handleProductPress = (productId) => {
         navigation.navigate('Produto', {
@@ -21,35 +28,78 @@ export default function Produtos({ navigation }) {
     };
 
     useEffect(() => {
-        const getProducts = async () => {
+        async function loadProducts() {
             try {
-                const docsRef = collection(db, 'produtos');
-                const querySnapshot = await getDocs(docsRef);
+                setIsLoading(true);
+                setErrorMessage('');
 
-                const productsList = [];
+                const productsData = await getProducts(categoryId);
 
-                querySnapshot.forEach((doc) => {
-                    productsList.push({
-                        id: doc.id,
-                        ...doc.data(),
-                    });
-                });
-
-                setProducts(productsList);
+                setProducts(productsData);
             } catch (error) {
-                console.log('An error occurred:', error);
-            }
-        };
-        getProducts();
-    }, []);
+                console.error('Erro ao carregar produtos:', error);
 
-    const HeroSection = () => (
+                setProducts([]);
+
+                setErrorMessage('Não foi possível carregar os produtos.');
+            } finally {
+                setIsLoading(false);
+            }
+        }
+
+        loadProducts();
+    }, [categoryId]);
+
+    const renderProduct = ({ item }) => (
+        <Card
+            title={item.name}
+            price={item.price}
+            image={item.imageUrl}
+            onPress={() => handleProductPress(item.id)}
+            onButtonPress={() => handleProductPress(item.id)}
+            showFooter={true}
+        />
+    );
+
+    const ListHeader = () => (
         <View style={styles.hero}>
             <Text style={styles.title}>Nossos Produtos</Text>
 
-            <Text style={styles.subtitle}>Aproveite nossa variedade de sabores!</Text>
+            <Text style={styles.subtitle}>
+                {categoryId ? 'Produtos da categoria selecionada.' : 'Aproveite nossa variedade de sabores!'}
+            </Text>
         </View>
     );
+
+    const ListEmpty = () => {
+        if (isLoading) {
+            return (
+                <View style={styles.feedback}>
+                    <ActivityIndicator size='large' color={theme.colors.primary} />
+
+                    <Text style={styles.feedbackText}>Carregando Produtos...</Text>
+                </View>
+            );
+        }
+
+        if (errorMessage) {
+            return (
+                <View style={styles.feedback}>
+                    <Text style={styles.errorText}>{errorMessage}</Text>
+                </View>
+            );
+        }
+
+        return (
+            <View style={styles.feedback}>
+                <Text style={styles.feedbackText}>
+                    {categoryId
+                        ? 'Nenhum produto encontrado nesta categoria.'
+                        : 'Nenhum produto disponível no momento.'}
+                </Text>
+            </View>
+        );
+    };
 
     return (
         <View
@@ -61,22 +111,15 @@ export default function Produtos({ navigation }) {
             ]}
         >
             <FlatList
-                keyExtractor={(item) => item.id.toString()}
                 data={products}
-                renderItem={({ item }) => (
-                    <Card
-                        title={item.nome}
-                        price={item.preco}
-                        image={item.imagemUrl}
-                        onPress={() => handleProductPress(item.id)}
-                        showFooter={true}
-                    />
-                )}
+                keyExtractor={(item) => String(item.id)}
+                renderItem={renderProduct}
                 numColumns={2}
-                columnWrapperStyle={styles.grid}
+                columnWrapperStyle={products.length > 1 ? styles.grid : undefined}
                 showsVerticalScrollIndicator={false}
-                ListHeaderComponent={HeroSection}
-                contentContainerStyle={styles.content}
+                ListHeaderComponent={ListHeader}
+                ListEmptyComponent={ListEmpty}
+                contentContainerStyle={[styles.content, products.length === 0 && styles.emptyContent]}
             />
         </View>
     );
@@ -88,14 +131,18 @@ const styles = StyleSheet.create({
         flex: 1,
     },
 
-    hero: {
-        marginTop: theme.spacing[4],
-        marginBottom: theme.spacing[8],
-    },
-
     content: {
         paddingHorizontal: theme.spacing[3],
         paddingBottom: theme.spacing[6],
+    },
+
+    emptyContent: {
+        flexGrow: 1,
+    },
+
+    hero: {
+        marginTop: theme.spacing[4],
+        marginBottom: theme.spacing[8],
     },
 
     grid: {
@@ -103,6 +150,26 @@ const styles = StyleSheet.create({
         justifyContent: 'space-between',
         gap: theme.spacing[4],
         marginBottom: theme.spacing[5],
+    },
+
+    feedback: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+        gap: theme.spacing[3],
+        paddingVertical: theme.spacing[8],
+    },
+
+    feedbackText: {
+        color: theme.colors.muted,
+        fontSize: theme.typography.sizes.sm,
+        textAlign: 'center',
+    },
+
+    errorText: {
+        color: theme.colors.danger ?? theme.colors.primary,
+        fontSize: theme.typography.sizes.sm,
+        textAlign: 'center',
     },
 
     title: {

@@ -5,67 +5,67 @@ import { theme } from '../../theme';
 
 import Card from '../Card';
 
-export default function Carousel({ data, cardStyle, onCardPress }) {
-    const [curIndex, setCurIndex] = useState(0);
+const cardWidth = 180;
+const cardsPerPage = 2;
+const cardHorizontalMargin = theme.spacing[2];
 
-    /**
-     * Define o ponto de parada do carrossel.
-     * Ele calcula o espaço em pixels de 2 Cards que ocupam a tela por vez:
-     *
-     * Fórmula: (`CardWidth` * `Amount`) + `Total Horizontal Margins`
-     */
-    const cardInterval = 392;
+const pageInterval = cardWidth * cardsPerPage + cardHorizontalMargin * 2 * cardsPerPage;
+
+export default function Carousel({ data = [], cardStyle = 'Standard', onCardPress }) {
+    const [currentPage, setCurrentPage] = useState(0);
+
+    const pageCount = Math.ceil(data.length / cardsPerPage);
+
+    const handleScrollEnd = (event) => {
+        const horizontalOffset = event.nativeEvent.contentOffset.x;
+
+        const nextPage = Math.round(horizontalOffset / pageInterval);
+
+        setCurrentPage(nextPage);
+    };
+
+    const renderItem = ({ item }) => {
+        return (
+            <View style={styles.cardContainer}>
+                <Card
+                    style={cardStyle}
+                    title={item.name}
+                    price={item.price}
+                    image={item.imageUrl}
+                    onPress={() => onCardPress?.(item.id)}
+                />
+            </View>
+        );
+    };
+
+    if (data.length === 0) {
+        return null;
+    }
 
     return (
         <View style={styles.container}>
             <FlatList
-                keyExtractor={(item) => item.id.toString()}
                 data={data}
-                renderItem={({ item }) => (
-                    <View style={styles.cardContainer}>
-                        <Card
-                            style={cardStyle}
-                            title={item.name}
-                            image={item.imageUrl}
-                            onPress={() => onCardPress?.(item.id)}
-                        />
-                    </View>
-                )}
-                onScroll={(event) => {
-                    const totalDragged = event.nativeEvent.contentOffset.x;
-                    const currentPage = Math.round(totalDragged / cardInterval);
-                    setCurIndex(currentPage * 2);
-                }}
-                scrollEventThrottle={16}
+                keyExtractor={(item) => String(item.id)}
+                renderItem={renderItem}
+                onMomentumScrollEnd={handleScrollEnd}
                 showsHorizontalScrollIndicator={false}
-                snapToAlignment='center'
-                snapToInterval={cardInterval}
+                snapToAlignment='start'
+                snapToInterval={pageInterval}
+                decelerationRate='fast'
                 horizontal
             />
 
-            <View
-                style={[
-                    theme.utils.flexRow,
-                    theme.utils.justifyCenter,
-                    { gap: theme.spacing[4], marginTop: theme.spacing[3] },
-                ]}
-            >
-                {data.map((item, index) => {
-                    if (index % 2 !== 0) return null;
-
-                    return (
+            {pageCount > 1 && (
+                <View style={styles.pagination}>
+                    {Array.from({ length: pageCount }).map((_, pageIndex) => (
                         <View
-                            key={index}
-                            style={{
-                                backgroundColor: index === curIndex ? '#808080' : '#FAFAFA',
-                                width: 16,
-                                height: 16,
-                                borderRadius: theme.borders.radius.md,
-                            }}
+                            key={pageIndex}
+                            style={[styles.paginationDot, pageIndex === currentPage && styles.paginationDotActive]}
                         />
-                    );
-                })}
-            </View>
+                    ))}
+                </View>
+            )}
         </View>
     );
 }
@@ -76,6 +76,24 @@ const styles = StyleSheet.create({
     },
 
     cardContainer: {
-        marginHorizontal: theme.spacing[2],
+        marginHorizontal: cardHorizontalMargin,
+    },
+
+    pagination: {
+        flexDirection: 'row',
+        justifyContent: 'center',
+        gap: theme.spacing[4],
+        marginTop: theme.spacing[3],
+    },
+
+    paginationDot: {
+        backgroundColor: theme.colors.cardBackground,
+        width: 16,
+        height: 16,
+        borderRadius: theme.borders.radius.md,
+    },
+
+    paginationDotActive: {
+        backgroundColor: theme.colors.mutedMedium,
     },
 });

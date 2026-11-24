@@ -3,7 +3,7 @@ import coconutCake from '../assets/coconut-cake.png';
 import oreoCookieCake from '../assets/oreo-cookie-cake.png';
 import passionFruitCake from '../assets/passion-fruit-cake.png';
 import whiteChocolateCake from '../assets/white-chocolate-cake.png';
-
+ 
 export const categories = [
     {
         id: 1,
@@ -11,7 +11,7 @@ export const categories = [
         imageUrl: chocolateCake,
         link: 'Produtos',
     },
-
+ 
     {
         id: 2,
         name: 'Bolos de Pote',
@@ -19,7 +19,7 @@ export const categories = [
         link: 'Produtos',
     },
 ];
-
+ 
 export const products = [
     {
         id: 1,
@@ -29,16 +29,16 @@ export const products = [
         imageUrl: coconutCake,
         link: 'Produto',
     },
-
+ 
     {
         id: 2,
         name: 'Biscoito Oreo',
         description: 'Delicioso bolo de pote sabor biscoito oreo.',
-        price: 40.0,
+        price: 15.00,
         imageUrl: oreoCookieCake,
         link: 'Produto',
     },
-
+ 
     {
         id: 3,
         name: 'Chocolate Branco',
@@ -47,7 +47,7 @@ export const products = [
         imageUrl: whiteChocolateCake,
         link: 'Produto',
     },
-
+ 
     {
         id: 4,
         name: 'Bolos Caseiros',
@@ -56,7 +56,7 @@ export const products = [
         imageUrl: chocolateCake,
         link: 'Produto',
     },
-
+ 
     {
         id: 5,
         name: 'Maracujá',
@@ -66,7 +66,9 @@ export const products = [
         link: 'Produto',
     },
 ];
-
+ 
 const favoriteProductIds = [2, 1, 3];
-
+ 
 export const favorites = favoriteProductIds.map((id) => products.find((product) => product.id === id)).filter(Boolean);
+ 
+ 

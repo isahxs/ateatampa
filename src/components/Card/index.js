@@ -1,38 +1,43 @@
-import { StyleSheet, View, Text, Image, Pressable, TouchableOpacity } from 'react-native';
+import { StyleSheet, View, Text, Image, Pressable } from 'react-native';
 
+import { formatPrice } from '../../utilities/formatPrice';
 import { theme } from '../../theme';
 
 import ImagePlaceholder from '../../assets/default-image.png';
 
-export default function Card({ style = 'Standard', title, price, image, onPress, showFooter }) {
-    const formatPrice =
-        price !== undefined
-            ? price.toLocaleString('pt-BR', {
-                  style: 'currency',
-                  currency: 'BRL',
-              })
-            : 'Preço';
+export default function Card({
+    style = 'Standard',
+    title,
+    price,
+    image,
+    onPress,
+    onButtonPress,
+    showFooter = false,
+}) {
+    const hasPrice = price !== undefined && price !== null;
+    const formattedPrice = formatPrice(price, 'Preço');
 
-    /**
-     * Normalizes a local or remote image source.
-     */
-
-    const getImageSource = (image) => {
-        if (typeof image === 'string' && image.trim().length > 0) {
-            return { uri: image };
+    const getImageSource = (imageValue) => {
+        if (
+            typeof imageValue === 'string' &&
+            imageValue.trim().length > 0
+        ) {
+            return {
+                uri: imageValue,
+            };
         }
 
-        if (typeof image === 'number') {
-            return image;
+        if (typeof imageValue === 'number') {
+            return imageValue;
         }
 
         if (
-            image !== null &&
-            typeof image === 'object' &&
-            typeof image.uri === 'string' &&
-            image.uri.trim().length > 0
+            imageValue !== null &&
+            typeof imageValue === 'object' &&
+            typeof imageValue.uri === 'string' &&
+            imageValue.uri.trim().length > 0
         ) {
-            return image;
+            return imageValue;
         }
 
         return ImagePlaceholder;
@@ -40,33 +45,92 @@ export default function Card({ style = 'Standard', title, price, image, onPress,
 
     const imageSource = getImageSource(image);
 
-    const Content = style === 'Standard' && (
-        <View style={styles.card}>
-            <View style={styles.header}>
-                <Image style={styles.image} source={imageSource} />
-            </View>
-
-            <View style={[styles.main, !showFooter && { paddingBottom: theme.spacing[4] }]}>
-                <Text style={styles.title}>{title || 'Título'}</Text>
-
-                {price && <Text style={styles.price}>{formatPrice}</Text>}
-            </View>
-
-            {showFooter && (
-                <View style={styles.footer}>
-                    <TouchableOpacity style={styles.btn} onPress={onPress}>
-                        <Text style={styles.btnText}>Comprar</Text>
-                    </TouchableOpacity>
-                </View>
-            )}
-        </View>
-    );
-
-    if (onPress) {
-        return <Pressable onPress={onPress}>{Content}</Pressable>;
+    if (style !== 'Standard') {
+        return null;
     }
 
-    return Content;
+    const MainContent = (
+        <>
+            <View style={styles.header}>
+                <Image
+                    style={styles.image}
+                    source={imageSource}
+                    resizeMode="cover"
+                />
+            </View>
+
+            <View
+                style={[
+                    styles.main,
+                    !showFooter && styles.mainWithoutFooter,
+                ]}
+            >
+                <Text style={styles.title}>
+                    {title || 'Título'}
+                </Text>
+
+                {hasPrice && (
+                    <Text style={styles.price}>
+                        {formattedPrice}
+                    </Text>
+                )}
+            </View>
+        </>
+    );
+
+    if (showFooter) {
+        return (
+            <View style={styles.card}>
+                {onPress ? (
+                    <Pressable
+                        onPress={onPress}
+                        accessibilityRole="button"
+                    >
+                        {MainContent}
+                    </Pressable>
+                ) : (
+                    MainContent
+                )}
+
+                <View style={styles.footer}>
+                    <Pressable
+                        style={({ pressed }) => [
+                            styles.button,
+                            pressed && styles.buttonPressed,
+                        ]}
+                        onPress={onButtonPress}
+                        disabled={!onButtonPress}
+                        accessibilityRole="button"
+                    >
+                        <Text style={styles.buttonText}>
+                            Ver Produto
+                        </Text>
+                    </Pressable>
+                </View>
+            </View>
+        );
+    }
+
+    if (onPress) {
+        return (
+            <Pressable
+                style={({ pressed }) => [
+                    styles.card,
+                    pressed && styles.cardPressed,
+                ]}
+                onPress={onPress}
+                accessibilityRole="button"
+            >
+                {MainContent}
+            </Pressable>
+        );
+    }
+
+    return (
+        <View style={styles.card}>
+            {MainContent}
+        </View>
+    );
 }
 
 const styles = StyleSheet.create({
@@ -74,29 +138,35 @@ const styles = StyleSheet.create({
         backgroundColor: theme.colors.brand.snow,
         width: 180,
         borderWidth: 1,
-        borderStyle: 'solid',
         borderColor: theme.colors.primary,
         borderRadius: theme.borders.radius.lg,
+        overflow: 'hidden',
     },
 
-    image: {
-        objectFit: 'cover',
-        width: 120,
-        height: 120,
-        borderRadius: theme.borders.radius.md,
+    cardPressed: {
+        opacity: 0.8,
     },
 
     header: {
         backgroundColor: theme.colors.brand.parchment,
         alignItems: 'center',
         padding: theme.spacing[4],
-        borderTopLeftRadius: theme.borders.radius.lg,
-        borderTopRightRadius: theme.borders.radius.lg,
+    },
+
+    image: {
+        width: 120,
+        height: 120,
+        borderRadius: theme.borders.radius.md,
     },
 
     main: {
         alignItems: 'center',
         paddingTop: theme.spacing[4],
+        paddingHorizontal: theme.spacing[2],
+    },
+
+    mainWithoutFooter: {
+        paddingBottom: theme.spacing[4],
     },
 
     footer: {
@@ -106,26 +176,30 @@ const styles = StyleSheet.create({
     title: {
         color: theme.colors.primary,
         fontSize: theme.typography.sizes.sm,
+        textAlign: 'center',
     },
 
     price: {
         color: theme.colors.primary,
         fontSize: theme.typography.sizes.sm,
+        marginTop: theme.spacing[2],
     },
 
-    btn: {
+    button: {
         backgroundColor: theme.colors.brand.maroon,
-        flexDirection: 'row',
         justifyContent: 'center',
         alignItems: 'center',
-        gap: theme.spacing[2],
         minWidth: '100%',
         minHeight: 40,
         padding: theme.spacing[2],
         borderRadius: theme.borders.radius.sm,
     },
 
-    btnText: {
+    buttonPressed: {
+        opacity: 0.8,
+    },
+
+    buttonText: {
         color: theme.colors.light,
         fontSize: theme.typography.sizes.sm,
         fontWeight: theme.typography.weights.medium,
